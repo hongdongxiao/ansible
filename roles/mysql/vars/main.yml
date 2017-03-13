@@ -1,0 +1,29 @@
+mysql_version: 5.7.10
+base_dir: /usr/local/mysql
+data_dir: /data/mysql
+mysql_port: 3306
+mysql_socket: /tmp/mysql.sock
+cmake: cmake -DCMAKE_INSTALL_PREFIX={{ base_dir }} -DMYSQL_DATADIR={{ data_dir }} -DSYSCONFDIR=/etc -DMYSQL_UNIX_ADDR={{ mysql_socket }} -DWITH_INNOBASE_STORAGE_ENGINE=1 -DWITH_BLACKHOLE_STORAGE_ENGINE=1 -DWITH_ARCHIVE_STORAGE_ENGINE=1 -DWITH_MYISAM_STORAGE_ENGINE=1 -DDEFAULT_CHARSET=utf8 -DDEFAULT_COLLATION=utf8_general_ci -DWITH_READLINE=1 -DENABLED_LOCAL_INFILE=1 -DWITH_DEBUG=0 -DDOWNLOAD_BOOST=1 -DWITH_BOOST=/usr/local/boost
+mysql_root_db_pass: 1q2w3e4r.
+mysql_bind_address: "0.0.0.0"
+dependent_pkgs: 
+  - gcc-c++
+  - ncurses-devel
+  - cmake
+  - make
+  - perl
+  - gcc
+  - autoconf
+  - automake
+  - zlib
+  - zlib-devel
+  - libxml2-devel
+  - libgcrypt
+  - libtool-ltdl-devel
+  - bison-devel
+  - MySQL-python
+mysql_repl_user:
+  - name: repl
+    pass: 1q2w3e4r.
+mysql_repl_role: master
+mysql_db_id: 1

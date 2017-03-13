@@ -1,0 +1,6 @@
+ - name: copy install file to client
+   copy: src=keepalived-1.1.15.tar.gz dest=/tmp/keepalived-1.1.15.tar.gz
+ - name: copy install_keepalived.sh to client
+   copy: src=install_keepalived.sh dest=/tmp/install_keepalived.sh mode="a+x"
+ - name: install keepalived
+   shell: /bin/bash /tmp/install_keepalived.sh

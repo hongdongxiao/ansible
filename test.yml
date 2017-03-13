@@ -1,0 +1,10 @@
+- name: test_when
+  hosts: tt
+  tasks:  
+  - name: aa
+    shell: /bin/find /data/
+    ignore_errors: true
+    register: slave
+  - name: Get the current master servers replication status
+    debug: var=slave.stdout_lines  verbosity=0
+

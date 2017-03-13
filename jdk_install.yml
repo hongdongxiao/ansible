@@ -1,0 +1,4 @@
+- hosts: tt
+  remote_user: root
+  roles: 
+  - jdk

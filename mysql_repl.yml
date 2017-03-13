@@ -1,0 +1,9 @@
+- hosts: mysql-master
+  remote_user: root
+  roles: 
+  - {role: mysql,mysql_repl_role: master,mysql_db_id: 1001,tags: [ 'repl' ]}
+- hosts: mysql-slave
+  remote_user: root
+  roles: 
+  - {role: mysql,mysql_repl_role: slave,mysql_repl_master: 192.168.7.216,mysql_db_id: 1002,tags: ['repl']}
+

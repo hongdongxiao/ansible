@@ -1,0 +1,4 @@
+- hosts: 192.168.7.219
+  remote_user: root
+  roles: 
+  - install_zabbix_agentd

@@ -1,0 +1,12 @@
+- name: Copy jdk_tar to client
+  unarchive: src=jdk-{{ jdk_version }}-linux-x64.tar.gz dest=/usr/local/
+- name: Install jdk
+  file: path=/usr/local/jdk{{ jdk_version }}/ owner=root group=root recurse=yes
+- name: Configure jdk
+  shell: /bin/echo {{ item }} >> /etc/profile
+  with_items: 
+     - export JAVA_HOME=/usr/local/jdk{{ jdk_version }}
+     - export PATH={{ JAVA_HOME }}/bin:{{ JAVA_HOME }}/jre/bin:$PATH
+     - export CLASSPATH=.:{{ JAVA_HOME }}/lib:{{ JAVA_HOME }}/jre/lib:{{ JAVA_HOME }}/lib/tools.jar
+- name: Source profile
+  shell: source /etc/profile

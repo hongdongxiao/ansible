@@ -1,0 +1,23 @@
+- name: check zabbix has install
+  command: test -d {{ zabbix_dir }}
+  register: result
+  ignore_errors: True
+- name: uncompress zabbix to client
+  unarchive: src=zabbix-{{ zabbix_version }}.tar.gz dest=/tmp
+  when: result.rc == 1
+- name: installnstall zabbix
+  shell: cd /tmp/zabbix-{{ zabbix_version }};
+         ./configure --prefix={{ zabbix_dir }} --enable-agent;
+         make && make install
+  when: result.rc == 1
+- name: copy zabbix agentd start script
+  template: src=zabbix_agentd dest=/etc/init.d/zabbix_agentd owner=root group=root mode=0755
+  when: result.rc == 1
+- name: copy zabbix config file
+  template: src=zabbix_agentd.conf dest={{ zabbix_dir }}/etc/zabbix_agentd.conf owner={{ zabbix_user }} group={{ zabbix_user }} mode=0644
+  when: result.rc == 1
+- name: modify zabbix dir permission
+  file: path={{ zabbix_dir }} owner={{ zabbix_user }} group={{ zabbix_user }} recurse=yes
+  when: result.rc == 1
+- name: start zabbix agentd
+  service: name=zabbix_agentd state=started enabled=yes

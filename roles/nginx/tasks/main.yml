@@ -1,0 +1,6 @@
+ - name: copy nginx_tar to client
+   copy: src=nginx-1.9.3.tar.gz dest=/tmp/nginx-1.9.3.tar.gz
+ - name: copy install_nginx.sh to client
+   copy: src=install_nginx.sh dest=/tmp/install_nginx.sh mode="a+x"
+ - name: install nginx
+   shell: /bin/bash /tmp/install_nginx.sh

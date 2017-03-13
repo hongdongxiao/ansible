@@ -1,0 +1,93 @@
+- name: mkdir /usr/local/boots
+  file: path=/usr/local/boots state=directory
+- name: Copy boots to client
+  unarchive: src=boost_1_59_0.tar.gz dest=/usr/local
+- name: Create boost soft link
+  file: src=/usr/local/boost_1_59_0  dest=/usr/local/boost state=link force=yes
+- name: Copy mysql.tar to client
+  unarchive: src=mysql-{{ mysql_version }}.tar.gz dest=/usr/local/src
+- name: Add mysql group
+  group: name=mysql
+- name: Add mysql user
+  user: name=mysql group=mysql shell=/sbin/nologin
+- name: Install dependent package
+  yum: name={{ item }} state=present
+  with_items: "{{dependent_pkgs}}"
+  ignore_errors: true
+  when: ansible_os_family == 'RedHat'
+- name: Configure  mysql
+  shell: chdir=/usr/local/src/mysql-{{ mysql_version }} {{ cmake }}
+- name: Make install mysql
+  make: chdir=/usr/local/src/mysql-{{ mysql_version }} target=install
+  become: yes
+- name: Change ownship of mysql basedir
+  file: path={{ base_dir }} owner=mysql group=mysql state=directory recurse=yes
+- name: Change ownship of mysql datadir
+  file: path={{ data_dir }} owner=mysql group=mysql state=directory recurse=yes
+- name: Copy my.cnf to client
+  template: src=my.cnf.j2 dest=/etc/my.cnf owner=mysql group=mysql
+  notify: restart mysqld
+  tags:
+  - modify
+- name: Create mysql commond soft link
+  file: src={{ base_dir }}/bin/{{ item }} dest=/usr/bin/{{ item }}  state=link force=yes
+  with_items: 
+  - mysql
+  - mysqld
+- name: Initialization mysql databases
+  shell: /usr/bin/mysqld --initialize-insecure --user=mysql --basedir={{ base_dir }} --datadir={{ data_dir}}
+- name: Copy mysql.server to init.d
+  shell: /bin/cp {{ base_dir }}/support-files/mysql.server /etc/init.d/mysqld && chmod 755 /etc/init.d/mysqld
+- name: Start mysqld service
+  service: name=mysqld state=started enabled=yes
+- name: update mysql root password for all root accounts
+  mysql_user: name=root host={{ item }} password={{ mysql_root_db_pass }} login_unix_socket={{ mysql_socket }}
+  with_items:
+  - "{{ ansible_hostname }}"
+  - 127.0.0.1
+  - ::1
+  - localhost
+- name: ensure anonymous users are not in the database
+  mysql_user: name='' host={{ item }} login_user=root login_password={{ mysql_root_db_pass }} login_unix_socket={{ mysql_socket }} state=absent
+  with_items: 
+  - "{{ ansible_hostname }}"
+  - 127.0.0.1
+  - localhost
+- name: remove the test database
+  mysql_db: name=test login_user=root login_password={{ mysql_root_db_pass }} login_unix_socket={{ mysql_socket }} state=absent
+- name: Create the repl user
+  mysql_user: login_user=root login_password={{ mysql_root_db_pass }} login_unix_socket={{ mysql_socket }} name={{ item.name }} host="%" password={{ item.pass|default("1q2w3e4r.") }}
+              priv="*.*:REPLICATION SLAVE" state=present
+  with_items: "{{ mysql_repl_user }}"
+  when: mysql_repl_role == 'master'
+  tags:
+  - repl
+- name: check if slave is already configure from replication
+  mysql_replication: login_user=root login_password={{ mysql_root_db_pass }} login_unix_socket={{ mysql_socket }} mode=getslave
+  ignore_errors: true
+  register: slave
+  when: mysql_repl_role == 'slave'
+  tags:
+  - repl
+- name: Get the current master servers replication status
+  mysql_replication: login_user=root login_password={{ mysql_root_db_pass }} login_unix_socket={{ mysql_socket }} mode=getmaster 
+  delegate_to: "{{ mysql_repl_master }}"
+  register: repl_stat
+  when: slave.Is_Slave == false and mysql_repl_role == 'slave' and mysql_repl_master is defined
+  tags:
+  - repl
+- name: Change the master in slave to start the replication
+  mysql_replication: login_user=root login_password={{ mysql_root_db_pass }} login_unix_socket={{ mysql_socket }} mode=changemaster
+                    master_host={{ mysql_repl_master }}
+                    master_log_file={{ repl_stat.File }}
+                    master_log_pos={{ repl_stat.Position }}
+                    master_user={{ mysql_repl_user[0].name }}
+                    master_password={{ mysql_repl_user[0].pass }}
+  when: slave.Is_Slave == false and mysql_repl_role == 'slave' and mysql_repl_master is defined
+  tags:
+  - repl
+- name: Start slave 
+  mysql_replication: login_user=root login_password={{ mysql_root_db_pass }} login_unix_socket={{ mysql_socket }} mode=startslave  
+  when: slave.Is_Slave == false and mysql_repl_role == 'slave' and mysql_repl_master is defined
+  tags:
+  - repl
